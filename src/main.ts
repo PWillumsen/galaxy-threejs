@@ -3,18 +3,19 @@ import * as THREE from "three";
 import GUI from "lil-gui";
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { normDist } from "./normDist";
-
+import particleTextureImg from "./textures/particles/3.png"
 
 const canvas = document.getElementById("webgl");
 const params = { 
-  count: 50000, 
+  count: 200000, 
   radius: 5, 
   size: 0.01, 
   branches: 6, 
   innerColor: "#ff9500", 
   outerColor: "#0000ff", 
   spin: 1, 
-  spread: 0.05
+  spread: 0.09,
+  falloff: 0.7
 }
 const sizes = { width: window.innerWidth, height: window.innerHeight }
 
@@ -33,7 +34,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 1000);
 const controls = new OrbitControls(camera, canvas as HTMLCanvasElement)
 controls.enableDamping = true
-camera.position.set(3,3,3);
+camera.position.set(3,7,3);
 scene.add(camera)
 
 window.addEventListener("resize", () => {
@@ -56,6 +57,10 @@ window.addEventListener("resize", () => {
  * Particles
  */
 // Geometry
+
+const textureLoader = new THREE.TextureLoader();
+const texture = textureLoader.load(particleTextureImg);
+
 
 let geometry: THREE.BufferGeometry | null = null;
 let material: THREE.PointsMaterial | null = null;
@@ -85,9 +90,9 @@ const generateGalaxy = () => {
     const branchAngle = (i % params.branches) / params.branches * Math.PI * 2;
     const spinAngle = params.spin * radius
     
-    const randX = normDist(0, params.spread) * (params.radius +0.2 - radius)
-    const randY = normDist(0, params.spread) * (params.radius +0.2 - radius)
-    const randZ = normDist(0, params.spread) * (params.radius +0.2 - radius)
+    const randX = normDist(0, params.spread) * (params.radius + params.falloff - radius)
+    const randY = normDist(0, params.spread) * (params.radius + params.falloff - radius)
+    const randZ = normDist(0, params.spread) * (params.radius + params.falloff - radius)
     
     
     positions[i3] = Math.cos(branchAngle + spinAngle) * radius + randX
@@ -109,12 +114,13 @@ const generateGalaxy = () => {
 
   // Material
   material = new THREE.PointsMaterial()
-
+  material.alphaMap = texture;
   material.size = params.size;
   material.sizeAttenuation = true
   material.blending = THREE.AdditiveBlending
+  material.transparent = true;
   material.vertexColors = true
-  material.depthWrite = true;
+  material.depthWrite = false;
 
   // Points
   points = new THREE.Points(particlesGeometry, material)
@@ -123,12 +129,13 @@ const generateGalaxy = () => {
 
 // GUI
 const gui = new GUI()
-gui.add(params, "count").min(1000).max(100000).step(1000).onFinishChange( generateGalaxy);
+gui.add(params, "count").min(1000).max(1000000).step(1000).onFinishChange( generateGalaxy);
 gui.add(params, "radius").min(1).max(10).step(1).onFinishChange(generateGalaxy)
 gui.add(params, "size").min(0.001).max(0.1).step(0.001).onFinishChange(generateGalaxy)
 gui.add(params, "branches").min(2).max(10).step(1).onFinishChange(generateGalaxy)
 gui.add(params, "spin").min(-3).max(3).step(0.01).onFinishChange(generateGalaxy)
-gui.add(params, "spread").min(0).max(0.1).step(0.001).onFinishChange(generateGalaxy)
+gui.add(params, "spread").min(0).max(0.2).step(0.001).onFinishChange(generateGalaxy)
+gui.add(params, "falloff").min(0).max(8).step(0.01).onFinishChange(generateGalaxy)
 gui.addColor(params, "innerColor").onFinishChange(generateGalaxy);
 gui.addColor(params, "outerColor").onFinishChange(generateGalaxy);
 
